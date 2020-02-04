@@ -279,8 +279,8 @@ keys = 'YELLOW SUBMARINE'
 # print enc
 # print decry_AES_128_ECB(enc,keys)
 ##   '74e3a6263a5a56d86553904f151b3b18'
-file = open('7.txt','r').read()
-from base64 import b64decode
-print decry_AES_128_ECB(b64decode(file),keys)
+# file = open('7.txt','r').read()
+# from base64 import b64decode
+# print decry_AES_128_ECB(b64decode(file),keys)
 ## 一行一行读，却不行。
 

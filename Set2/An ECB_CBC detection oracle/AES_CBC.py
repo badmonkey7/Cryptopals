@@ -169,28 +169,43 @@ def re_col_mix(mess):
         # print muti(0x0b, ord(cur[0])) ^ muti(0x0d, ord(cur[1])) ^ muti(0x09, ord(cur[2])) ^ muti(0x0e, ord(cur[3])),
     # print "列混合前："+ans.encode('hex')
     return ans
+# pkcs 7 padding
+def pkcs7padding(target,size):
+    tot = len(target)//size
+    record = []
+    if tot :
+        for i in range(tot):
+            record.append(target[i*size:i*size + size])
+    pad = tot*size+size-len(target)
+    if pad != 0:
+        record.append(target[tot*size:]+chr(pad)*pad)
+    else:
+        record.append(chr(size)*size)
+    return record
 
+# remove pkcs7padding
+def removePkcs7(target):
+    lst = target[-1]
+    pos = 0
+    for i in range(len(target)-1,-1,-1):
+        if target[i] != lst:
+            pos = i+1
+            break
+    return target[0:pos]
 
 # AES_128_ECB 加密，采用pkcs5padding方式填充
-def AES_128_ECB(message, keys):
+def AES_128_CBC(message, keys,iv):
     # 先进行分组，128位一组
-    tot = len(message) // 16
-    record = []
-    for i in range(tot):
-        record.append(message[16 * i: 16 * i + 16])
-    left = 16 * (tot + 1) - len(message)
-    if left == 0:
-        record.append(chr(16) * 16)
-    else:
-        tmp = message[tot * 16:] + chr(left) * left
-        record.append(tmp)
+    record = pkcs7padding(message,16)
     enc = ''
     # 密钥扩展
     W = key_ext(keys)
-    # 对每一组进行加密
+    # 对每一组进行加密,先和前驱密钥异或
+    pre = iv
     for mess in record:
-        # 初始的 密钥加
         # print '第0轮加密....','加密前:'+mess.encode('hex'),
+        mess = xor(mess,pre)
+        # 初始的 密钥加
         mess = cir_key_add(mess, 0, W)
         # print '加密后', mess.encode('hex')
         # 十轮加密
@@ -211,6 +226,7 @@ def AES_128_ECB(message, keys):
         mess = S(mess)
         mess = row_change(mess)
         mess = cir_key_add(mess, 10, W)
+        pre = mess
         # print "加密后:", mess.encode('hex')
         enc += mess
     return enc
@@ -237,7 +253,7 @@ def decry_block(block,W):
     # print '解密后:', i.encode('hex')
     return i
 # 解密
-def decry_AES_128_ECB(enc, key):
+def decry_AES_128_CBC(enc, key,iv):
     # 密钥扩展
     W = key_ext(key)
     # 先进行分组，128位一组
@@ -249,38 +265,33 @@ def decry_AES_128_ECB(enc, key):
     if len(record) == 1:
         i = record[0]
         i = decry_block(i, W)
-        t = i[-1]
-        pos = 0
-        for j in range(len(i) - 1, 0, -1):
-            if i[j] != t:
-                pos = j + 1
-                break
-        message = i[0:pos]
+        # 解密之后与iv异或
+        i = xor(i,iv)
+        # remove padding
+        i = removePkcs7(i)
+        message = i
     else:
+        pre = iv
         for i in range(0,len(record)-1):
             block = record[i]
-            message += decry_block(block,W)
+            cur = decry_block(block,W)
+            message += xor(pre,cur)
+            pre = block
         # 最后一块，特殊处理
-        lst = decry_block(record[-1],W)
-        pt = lst[-1]
-        pos = 0
-        for i in range(len(lst)-1,-1,-1):
-            if lst[i] != pt:
-                pos = i+1
-                break
-        message += lst[0:pos]
+        lst = xor(pre,decry_block(record[-1],W))
+        # remove padding
+        message += removePkcs7(lst)
     return message
 
 
 keys = 'YELLOW SUBMARINE'
-# mess = 'happy_2020aaaaaaaaaa'
+mess = 'happy_2020aaaaaaaaaa'
 # t = 't8is_Is a teSt!!'
-# enc = AES_128_ECB(mess, keys)
-# print enc
-# print decry_AES_128_ECB(enc,keys)
-##   '74e3a6263a5a56d86553904f151b3b18'
-file = open('7.txt','r').read()
-from base64 import b64decode
-print decry_AES_128_ECB(b64decode(file),keys)
-## 一行一行读，却不行。
-
+# iv = ''
+# for i in range(16):
+#     iv += chr(0)
+# file = open('10.txt','r').read()
+# from base64 import b64decode
+# file = b64decode(file)
+# passage = decry_AES_128_CBC(file,keys,iv)
+# print passage
