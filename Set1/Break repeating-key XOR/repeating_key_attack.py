@@ -13,7 +13,6 @@ def edit_dis(a, b):
 # keysize选择的方式要根据 平均编辑距离选择！，num 为选择的块数，块数越多越精准，时间也越长,测试结果显示num = 2，3时得不到正确的解密字符串
 def guess_keysize(a,num=4):
     record = []
-    val = []
     for i in range(2, 40):
         # 每 i 个分成一组，取两组之间计算编辑距离
         block = []
@@ -64,7 +63,7 @@ def repeating_key_attack(a):
         key = guess_key(a,key_size)
         # 用爆破得来的key，解密a,计算对应的分数
         tmp = repeating_key_xor(a,key)
-        record.append({'score':calScore(tmp),'ans':tmp})
+        record.append({'score':calScore(tmp),'ans':tmp,'key':key})
     # 返回分数最高的解密结果
     return sorted(record,key=lambda c:c['score'])[-1]
 
@@ -74,5 +73,5 @@ file = ''.join(i.strip() for i in file)
 file = decode(file)
 # print guess_keysize(file)
 print repeating_key_attack(file)['ans']
-f = 'JXU2NUIwJXU1RTc0JXU1RkVCJXU0RTUwJXU1NDQwJXVGRjAx'
-print decode(f)
+# f = 'JXU2NUIwJXU1RTc0JXU1RkVCJXU0RTUwJXU1NDQwJXVGRjAx'
+# print decode(f)
